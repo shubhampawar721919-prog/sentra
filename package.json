@@ -1,0 +1,17 @@
+{
+  "name": "polaris-monorepo",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\" \"npm run dev:ml\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:ml": "cd ml && source venv/bin/activate && uvicorn app.main:app --reload --port 8000",
+    "start": "concurrently -n frontend,backend,ml \"npm run start:frontend\" \"npm run start:backend\" \"npm run start:ml\"",
+    "start:frontend": "cd frontend && npm run preview -- --host 0.0.0.0 --port 5173",
+    "start:backend": "cd backend && npm start",
+    "start:ml": "cd ml && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

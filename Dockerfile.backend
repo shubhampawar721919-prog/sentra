@@ -1,0 +1,25 @@
+# =============================================================================
+# Polaris — Backend Service (Node.js / Express)
+# Build context: repo root   (used by Render — dockerfilePath: ./Dockerfile.backend)
+# For local dev use:  docker compose up --build
+# =============================================================================
+
+# ── Stage 1: install prod deps ────────────────────────────────────────────────
+FROM node:20-alpine AS deps
+WORKDIR /build
+
+COPY backend/package*.json ./
+RUN npm ci --omit=dev
+
+# ── Stage 2: lean runtime ─────────────────────────────────────────────────────
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+COPY --from=deps /build/node_modules ./node_modules
+COPY backend/src/ ./src/
+COPY backend/package.json ./package.json
+
+ENV PORT=5001
+EXPOSE 5001
+
+CMD ["node", "src/app.js"]

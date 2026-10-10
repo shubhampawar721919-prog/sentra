@@ -1,0 +1,40 @@
+# =============================================================================
+# Polaris — Frontend Service (Vite + React → nginx)
+# Build context: repo root   (Render: dockerfilePath: ./Dockerfile.frontend)
+# Local dev:     docker compose up --build
+#
+# VITE_API_URL strategy:
+#   Build time  → default fallback (http://localhost:5001)
+#   Runtime     → entrypoint.sh writes window.__POLARIS_API_URL__ into config.js
+#                 from the $API_URL env var injected by Render
+# =============================================================================
+
+# ── Stage 1: Vite build ───────────────────────────────────────────────────────
+FROM node:20-alpine AS builder
+WORKDIR /build
+
+COPY frontend/package*.json ./
+RUN npm ci
+
+COPY frontend/ ./
+
+# Build with the localhost fallback baked in.
+# The real URL is overridden at runtime via config.js (see entrypoint.sh).
+RUN npm run build
+
+# ── Stage 2: nginx static server ──────────────────────────────────────────────
+FROM nginx:1.27-alpine AS runner
+
+RUN rm /etc/nginx/conf.d/default.conf
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Static assets from Vite build
+COPY --from=builder /build/dist /usr/share/nginx/html
+
+# Runtime entrypoint: writes config.js with real API_URL before nginx starts
+COPY frontend/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 80
+
+ENTRYPOINT ["/entrypoint.sh"]

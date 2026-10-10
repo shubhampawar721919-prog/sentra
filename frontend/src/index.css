@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background-color: #F6FAFD;
+  color: #1E3448;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F6FAFD; }
+::-webkit-scrollbar-thumb { background: #D8E7F0; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #b0ccdf; }
+
+/* Live pulse animation */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Station grid for Digital Twin */
+.station-grid {
+  background-color: #F0F8FD;
+  background-image:
+    linear-gradient(rgba(37,99,235,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37,99,235,0.06) 1px, transparent 1px),
+    linear-gradient(rgba(37,99,235,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37,99,235,0.03) 1px, transparent 1px);
+  background-size: 80px 80px, 80px 80px, 20px 20px, 20px 20px;
+}
+
+/* Drawer slide animation */
+@keyframes slideInRight {
+  from { transform: translateX(60px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.slide-in-right {
+  animation: slideInRight 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* Fade in */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* Severity badge colors */
+.badge-critical { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+.badge-high     { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+.badge-medium   { background: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; }
+.badge-low      { background: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE; }
+
+/* Status colors */
+.status-normal   { color: #16A34A; }
+.status-warning  { color: #D97706; }
+.status-critical { color: #DC2626; }
+
+/* Login left panel — show on large screens */
+@media (min-width: 1024px) {
+  .login-left-panel {
+    display: flex !important;
+  }
+}
+
+/* Nav item hover */
+.nav-item:hover {
+  background-color: #F6FAFD;
+  color: #1E3448 !important;
+}
+

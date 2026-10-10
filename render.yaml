@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: polaris-unified
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: ML_SERVICE_URL
+        value: http://127.0.0.1:8000
+      - key: MONGO_URI
+        sync: false # Set your MongoDB Atlas URI in the Render dashboard
+      - key: GROQ_API_KEY
+        sync: false # Set your Groq API key in the Render dashboard
+      - key: JWT_SECRET
+        generateValue: true

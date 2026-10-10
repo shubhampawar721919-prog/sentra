@@ -1,0 +1,64 @@
+version: "3.9"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# POLARIS — Local Docker Compose
+# Starts all three services with a single: docker compose up --build
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── 1. ML Service (FastAPI) ──────────────────────────────────────────────
+  ml:
+    build:
+      context: ./ml
+    container_name: polaris-ml
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-llama3-70b-8192}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── 2. Backend Service (Node / Express) ─────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+    container_name: polaris-backend
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - MONGO_URI=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:80}
+      - ML_SERVICE_URL=http://ml:8000        # internal Docker network
+    depends_on:
+      ml:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5001/api/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── 3. Frontend Service (Vite → nginx) ──────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Baked into the JS bundle at build time
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5001}
+    container_name: polaris-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy

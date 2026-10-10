@@ -1,0 +1,16 @@
+node_modules
+frontend/node_modules
+backend/node_modules
+frontend/dist
+ml/venv
+ml/__pycache__
+ml/**/__pycache__
+*.pyc
+.git
+.gitignore
+.DS_Store
+**/.DS_Store
+.env
+frontend/.env
+backend/.env
+ml/.env
