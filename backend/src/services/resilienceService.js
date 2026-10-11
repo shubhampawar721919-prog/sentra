@@ -1,7 +1,7 @@
 /**
  * resilienceService.js
  * 
- * Deterministic Station Resilience Scoring for POLARIS.
+ * Deterministic Station Resilience Scoring for SENTRA.
  * Calculates an explainable, reproducible 0-100 score reflecting the station's
  * capacity to maintain operations under combined asset risk, cascading threats,
  * energy margins, fuel reserves, and environmental stress.

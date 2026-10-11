@@ -41,6 +41,7 @@ export default function DigitalTwin() {
   const [assets, setAssets] = useState([]);
   const [stationIntel, setStationIntel] = useState(null);
   const [dependencies, setDependencies] = useState(null);
+  const [sensors, setSensors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -86,16 +87,18 @@ export default function DigitalTwin() {
     if (!silent) setLoading(true);
     setError(null);
     try {
-      const [assetsRes, intelRes, depRes] = await Promise.all([
+      const [assetsRes, intelRes, depRes, sensorsRes] = await Promise.all([
         client.get(`/stations/${selectedStation._id}/assets?_t=${Date.now()}`),
         client.get(`/stations/${selectedStation._id}/intelligence?_t=${Date.now()}`),
-        client.get(`/stations/${selectedStation._id}/dependencies?_t=${Date.now()}`)
+        client.get(`/stations/${selectedStation._id}/dependencies?_t=${Date.now()}`),
+        client.get(`/sensors?stationId=${selectedStation._id}&_t=${Date.now()}`).catch(() => ({ data: { data: [] } }))
       ]);
 
       const assetList = assetsRes.data.data || [];
       setAssets(assetList);
       setStationIntel(intelRes.data.data);
       setDependencies(depRes.data.data);
+      setSensors(sensorsRes.data?.data || []);
 
       // Default selected asset if current selection is invalid for station
       if (assetList.length > 0) {
@@ -174,6 +177,13 @@ export default function DigitalTwin() {
 
     return buckets;
   }, [assets, dependencies, filterRisk, intelMap]);
+
+  // Average sensor trust across monitored channels
+  const avgSensorTrust = useMemo(() => {
+    if (!sensors || sensors.length === 0) return 96;
+    const sum = sensors.reduce((acc, s) => acc + (s.trustScore || 100), 0);
+    return Math.round(sum / sensors.length);
+  }, [sensors]);
 
   // Simulated metrics when in What-If mode (Parts N, O)
   const simulatedStationState = useMemo(() => {
@@ -340,6 +350,22 @@ export default function DigitalTwin() {
                 <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B' }}>RESILIENCE</div>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: isSimulationMode ? '#DC2626' : '#16A34A' }}>
                   {isSimulationMode ? simulatedStationState.resilience : stationIntel.resilienceScore} / 100
+                </div>
+              </div>
+            </div>
+
+            {/* Sensor Fleet Trust Score */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '6px 12px', borderRadius: '8px',
+              backgroundColor: avgSensorTrust < 80 ? '#FFFBEB' : '#F0F9FF',
+              border: `1px solid ${avgSensorTrust < 80 ? '#FDE68A' : '#BAE6FD'}`
+            }}>
+              <Radio size={16} color={avgSensorTrust < 80 ? '#D97706' : '#0284C7'} />
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B' }}>SENSOR TRUST</div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: avgSensorTrust < 80 ? '#D97706' : '#0284C7' }}>
+                  {avgSensorTrust}% ({sensors.filter(s => s.status === 'HEALTHY').length}/{sensors.length || 0} OK)
                 </div>
               </div>
             </div>

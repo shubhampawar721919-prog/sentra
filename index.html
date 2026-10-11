@@ -3,9 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>just wait</title>
+    <title>SENTRA — Sensor Intelligence Platform</title>
+    <meta http-equiv="refresh" content="0; url=http://localhost:5173/">
+    <script>
+      // Immediate client redirect to frontend Vite dev server or current origin port 5173
+      if (window.location.port !== '5173') {
+        window.location.href = window.location.protocol + '//' + window.location.hostname + ':5173/';
+      }
+    </script>
+    <style>
+      body {
+        font-family: Inter, system-ui, sans-serif;
+        background-color: #0A0F1D;
+        color: #FFFFFF;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+      }
+      a {
+        color: #38BDF8;
+        font-weight: bold;
+        text-decoration: none;
+      }
+    </style>
 </head>
 <body>
-    
+    <h2>SENTRA Sensor Intelligence Console</h2>
+    <p>Redirecting to local console at <a href="http://localhost:5173/">http://localhost:5173/</a>...</p>
 </body>
 </html>

@@ -19,7 +19,7 @@ def generate_ai_analysis(data: dict) -> dict:
     client = Groq(api_key=api_key)
     
     prompt = f"""
-You are an expert AI diagnostician for the POLARIS Antarctic research station.
+You are an expert AI diagnostician for the SENTRA sensor intelligence platform at Antarctic research stations.
 Analyze the following machine learning results and telemetry for asset {data.get('assetId')}.
 
 Telemetry: {json.dumps(data.get('telemetry', {}))}

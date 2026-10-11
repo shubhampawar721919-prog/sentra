@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Snowflake, ArrowRight, Thermometer, Zap, Shield, Globe } from 'lucide-react';
-import { Compass, Loader2 } from 'lucide-react';
+import { Activity, Snowflake, ArrowRight, Thermometer, Zap, Shield, Globe, Compass, Loader2 } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -25,7 +24,7 @@ export default function Login() {
     }
   };
 
-  const DEMO_EMAIL = 'admin@polaris.gov';
+  const DEMO_EMAIL = 'admin@sentra.ai';
   const DEMO_PASSWORD = 'password123';
 
   const handleFillDemo = () => {
@@ -40,10 +39,19 @@ export default function Login() {
     setLoading(true);
     setError(null);
     try {
-      await login(DEMO_EMAIL, DEMO_PASSWORD);
+      const ok = await login(DEMO_EMAIL, DEMO_PASSWORD);
+      if (!ok) {
+        // Fallback to legacy polaris email if server seeded earlier
+        await login('admin@polaris.gov', DEMO_PASSWORD);
+      }
       navigate('/');
     } catch (err) {
-      setError(err.message || 'Demo login failed');
+      try {
+        await login('admin@polaris.gov', DEMO_PASSWORD);
+        navigate('/');
+      } catch (e2) {
+        setError(err.message || 'Demo login failed');
+      }
     } finally {
       setLoading(false);
     }
@@ -253,7 +261,7 @@ export default function Login() {
               }}>Email</label>
               <input
                 type="email"
-                placeholder="admin@polaris.gov"
+                placeholder="admin@sentra.ai"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 style={inputStyle}

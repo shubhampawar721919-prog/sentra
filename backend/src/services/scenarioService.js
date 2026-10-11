@@ -1,7 +1,7 @@
 /**
  * scenarioService.js
  * 
- * Deterministic Scenario Management & Action Simulation Service for POLARIS Phase 9.
+ * Deterministic Scenario Management & Action Simulation Service for SENTRA.
  * Simulates hypothetical operational mitigation actions against the station's baseline,
  * computes comparative resilience and energy trade-offs, and applies a multi-criteria
  * decision algorithm to deterministically select the optimal response.

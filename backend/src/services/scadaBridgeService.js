@@ -5,7 +5,7 @@
  * 
  * Demonstrates physical-layer integration between station PLCs / RTUs
  * (Siemens S7-1500 / Modbus TCP Gateway at Bharati & Maitri power stations)
- * and POLARIS WebSockets/REST ingestion pipeline.
+ * and SENTRA WebSockets/REST ingestion pipeline.
  */
 
 // Simulated PLC State & Register Memory Map

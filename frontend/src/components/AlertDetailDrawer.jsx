@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, ShieldAlert, Brain, Activity, Compass } from 'lucide-react';
+import { X, ShieldAlert, Brain, Activity, Compass, Radio, ShieldCheck, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react';
 import client from '../api/client';
 
 export default function AlertDetailDrawer({ alert, onClose, onUpdateStatus }) {
@@ -139,6 +139,84 @@ export default function AlertDetailDrawer({ alert, onClose, onUpdateStatus }) {
               </div>
             </div>
           </div>
+
+          {/* SENTRA Sensor Attribution & Trust Panel */}
+          {(alert.sensorId || alert.trustScore !== undefined || alert.faultClass) && (
+            <div style={{
+              marginBottom: '32px',
+              backgroundColor: alert.isGenuineEvent ? '#F0F9FF' : '#FEF2F2',
+              border: `1px solid ${alert.isGenuineEvent ? '#BAE6FD' : '#FECACA'}`,
+              borderRadius: '10px',
+              padding: '20px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Radio size={18} color={alert.isGenuineEvent ? '#0284C7' : '#DC2626'} />
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#12304A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Sensor Channel Attribution
+                  </span>
+                </div>
+                <span style={{
+                  fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '4px',
+                  backgroundColor: alert.isGenuineEvent ? '#E0F2FE' : '#FEE2E2',
+                  color: alert.isGenuineEvent ? '#0369A1' : '#B91C1C'
+                }}>
+                  {alert.faultClass || 'SENSOR_FAULT'}
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                <div style={{ backgroundColor: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Sensor Channel</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#1E3448', marginTop: '2px' }}>
+                    {alert.sensorName || alert.sensorId || 'Channel'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748B' }}><code>{alert.sensorId}</code></div>
+                </div>
+
+                <div style={{ backgroundColor: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Signal Trust Score</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: (alert.trustScore || 100) >= 80 ? '#16A34A' : '#DC2626', marginTop: '2px' }}>
+                    {alert.trustScore !== undefined ? `${alert.trustScore}%` : 'N/A'}
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', marginLeft: '4px' }}>
+                      ({Math.round((alert.modelConfidence || 0.92) * 100)}% Conf.)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Related Sensors Considered */}
+              {alert.relatedSensorsConsidered && alert.relatedSensorsConsidered.length > 0 && (
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '4px' }}>
+                    Peer Sensors Cross-Referenced:
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {alert.relatedSensorsConsidered.map(rs => (
+                      <span key={rs} style={{
+                        fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '4px',
+                        backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', color: '#334155'
+                      }}>
+                        {rs}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recommended Operator Action */}
+              {alert.recommendedAction && (
+                <div style={{
+                  padding: '10px 14px', borderRadius: '6px',
+                  backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0',
+                  fontSize: '13px', color: '#1E3448'
+                }}>
+                  <strong style={{ color: '#0369A1' }}>Recommended Action: </strong>
+                  {alert.recommendedAction}
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ marginBottom: '32px' }}>
             <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1E3448', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>

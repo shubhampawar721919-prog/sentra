@@ -23,6 +23,54 @@ export default function AnomalyTriggerModal({ isOpen, onClose, activeStation, on
 
   const scenarios = [
     {
+      id: 'SENSOR_DRIFT',
+      title: 'Sensor Gradual Drift (Thermocouple Calibration Divergence)',
+      assetId: 'SEN-TEMP-ENV-01',
+      icon: Activity,
+      color: '#DC2626',
+      bg: '#FEF2F2',
+      isSensorScenario: true,
+      sensorScenario: 'GRADUAL_DRIFT',
+      description: 'Injects subtle +8.5°C drift into SEN-TEMP-ENV-01 while peer weather mast sensors stay nominal at -28.2°C.',
+      impact: 'Identifies single-transducer calibration fault via cross-sensor peer residual. Suppresses false alarm on downstream HVAC.'
+    },
+    {
+      id: 'GENUINE_WEATHER_FRONT',
+      title: 'Genuine Environmental Event (Sudden Antarctic Blizzard)',
+      assetId: 'SEN-TEMP-ENV-01',
+      icon: Wind,
+      color: '#0284C7',
+      bg: '#F0F9FF',
+      isSensorScenario: true,
+      sensorScenario: 'GENUINE_ENVIRONMENTAL_EVENT',
+      description: 'Polar blizzard drops all 3 meteorological sensors simultaneously to -42.5°C in physical consensus.',
+      impact: 'Core Track 4 Requirement: Confirms spatial concordance, classifying change as genuine weather, preserving 95%+ sensor trust.'
+    },
+    {
+      id: 'SENSOR_FROZEN_STUCK',
+      title: 'Sensor Stuck-At / Frozen Value Lockup',
+      assetId: 'SEN-TEMP-ENV-01',
+      icon: AlertTriangle,
+      color: '#7C3AED',
+      bg: '#F5F3FF',
+      isSensorScenario: true,
+      sensorScenario: 'FROZEN_STUCK',
+      description: 'Sensor ADC locks up, returning identical static value across consecutive timesteps (zero dynamic variance).',
+      impact: 'Detects hardware stuck-at failure inside nominal range that static thresholds completely fail to identify.'
+    },
+    {
+      id: 'COMBINED_EVENT_FAULT',
+      title: 'Combined Scenario: Blizzard + Frozen Stuck Sensor',
+      assetId: 'SEN-TEMP-ENV-01',
+      icon: Zap,
+      color: '#EA580C',
+      bg: '#FFF7ED',
+      isSensorScenario: true,
+      sensorScenario: 'COMBINED_EVENT_FAULT',
+      description: 'Polar storm drops ambient air to -42°C, but SEN-TEMP-ENV-01 remains stuck at -20°C.',
+      impact: 'Preserves critical nuance: flags broken sensor while recognizing real environmental storm.'
+    },
+    {
       id: 'DG_OVERHEAT',
       title: 'Generator Severe Overheat & Bearing Seizure',
       assetId: defaultDg,
@@ -31,7 +79,7 @@ export default function AnomalyTriggerModal({ isOpen, onClose, activeStation, on
       bg: '#FEF2F2',
       telemetry: { temperature: 128.5, vibration: 3.10, generatorLoad: 98, powerOutput: 495, coolantTemperature: 114.0 },
       description: 'Progressive mechanical bearing seizure driving core temp > 125°C and severe 3x harmonic vibrations.',
-      impact: 'Triggers CRITICAL operational alert, XGBoost failure prob > 95%, and threatens 6 downstream power buses.'
+      impact: 'Triggers CRITICAL operational alert, failure prob > 95%, and threatens 6 downstream power buses.'
     },
     {
       id: 'BAT_RUNAWAY',
@@ -72,22 +120,33 @@ export default function AnomalyTriggerModal({ isOpen, onClose, activeStation, on
     const sc = scenarios.find(s => s.id === selectedScenario) || scenarios[0];
     setLoading(true);
     try {
-      const res = await client.post('/simulation/trigger-anomaly', {
-        assetId: sc.assetId,
-        telemetryOverrides: sc.telemetry
-      });
+      if (sc.isSensorScenario) {
+        const res = await client.post('/sensors/simulate-scenario', {
+          scenario: sc.sensorScenario,
+          targetSensorId: sc.assetId || 'SEN-TEMP-ENV-01'
+        });
+        toast.success(`⚡ Sensor Scenario Executed: ${sc.title}`, {
+          duration: 5000
+        });
+        if (onTriggerSuccess) onTriggerSuccess(res.data);
+      } else {
+        const res = await client.post('/simulation/trigger-anomaly', {
+          assetId: sc.assetId,
+          telemetryOverrides: sc.telemetry
+        });
 
-      toast.error(`⚠️ Critical Anomaly Injected: ${sc.title} (${sc.assetId})`, {
-        duration: 5000,
-        style: {
-          border: '1px solid #FECACA',
-          backgroundColor: '#FEF2F2',
-          color: '#991B1B',
-          fontWeight: 700
-        }
-      });
+        toast.error(`⚠️ Critical Anomaly Injected: ${sc.title} (${sc.assetId})`, {
+          duration: 5000,
+          style: {
+            border: '1px solid #FECACA',
+            backgroundColor: '#FEF2F2',
+            color: '#991B1B',
+            fontWeight: 700
+          }
+        });
 
-      if (onTriggerSuccess) onTriggerSuccess(res.data);
+        if (onTriggerSuccess) onTriggerSuccess(res.data);
+      }
       onClose();
     } catch (err) {
       console.error(err);

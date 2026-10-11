@@ -1,7 +1,7 @@
 /**
  * dependencyService.js
  * 
- * Canonical Dependency Graph Service for POLARIS Antarctic Research Stations.
+ * Canonical Dependency Graph Service for SENTRA Antarctic Research Stations.
  * Models physical, electrical, and thermal dependencies between station assets
  * to calculate cascade risk propagation and upstream/downstream impact chains.
  */

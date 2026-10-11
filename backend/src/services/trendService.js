@@ -1,7 +1,7 @@
 /**
  * trendService.js
  * 
- * Historical Telemetry & Asset Degradation Trend Service for POLARIS.
+ * Historical Telemetry & Asset Degradation Trend Service for SENTRA.
  * Queries MongoDB telemetry across 6H, 12H, and 24H windows, aggregates
  * energy/weather/fuel time series, and detects asset degradation trajectories.
  */

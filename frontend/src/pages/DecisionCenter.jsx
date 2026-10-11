@@ -184,7 +184,7 @@ export default function DecisionCenter() {
     const evidence = decisionData.evidence || [];
 
     const reportContent = `# NCPOR POLAR MISSION CONTROL — INCIDENT & TACTICAL RESPONSE LOG
-**Platform:** POLARIS Digital Twin Framework (MoES / NCPOR)
+**Platform:** SENTRA Sensor Intelligence Platform (MoES / NCPOR)
 **Classification:** RESTRICTED — ANTARCTIC SCIENTIFIC EXPEDITION OPERATIONS
 **Generated At:** ${now}
 **Station:** ${selectedStation.name} Station (${selectedStation.code})
@@ -204,7 +204,7 @@ ${evidence.length > 0 ? evidence.map(e => `  - ${e.label}: Current ${e.value} (N
 
 ---
 
-## 2. POLARIS MULTI-CRITERIA DECISION ANALYSIS (MCDA)
+## 2. SENTRA MULTI-CRITERIA DECISION ANALYSIS (MCDA)
 - **Optimal Automated Recommendation:** ${recommendation.selectedActionName || 'ACTIVATE PREVENTIVE PROTOCOL'}
 - **Action Identifier:** \`${recommendation.selectedActionId}\`
 - **Algorithm Confidence:** ${Math.round((recommendation.confidence || 0.88) * 100)}%
@@ -235,14 +235,14 @@ ${actions.map(a => `| ${a.name} | ${a.resilienceDelta >= 0 ? '+' : ''}${a.resili
 - **Chief Technical Engineer (HVAC/Microgrid):** ___________________________  Date: ____________
 - **NCPOR Mission Operations Control (Goa, India):** ___________________________  Date: ____________
 
-*POLARIS Autonomous Antarctic Digital Twin Engine · National Centre for Polar and Ocean Research (NCPOR)*
+*SENTRA Autonomous Sensor Trust & Digital Twin Engine · National Centre for Polar and Ocean Research (NCPOR)*
 `;
 
     const blob = new Blob([reportContent], { type: 'text/markdown;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `POLARIS_INCIDENT_${selectedStation.code}_${new Date().toISOString().slice(0, 10)}.md`);
+    link.setAttribute('download', `SENTRA_INCIDENT_${selectedStation.code}_${new Date().toISOString().slice(0, 10)}.md`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
