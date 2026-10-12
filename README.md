@@ -1,190 +1,445 @@
-# SENTRA — AI-Based Sensor Trust, Drift & False-Alarm Detection Platform
+# Sentra
 
-> **Tagline:** Trust the Signal. Detect the Fault.  
-> **Competition:** Code Apex — Track 4: Technology for Social Cause  
-> **Selected Problem Statement:** AI-Based Sensor Trust, Drift and False-Alarm Detection
+**Intelligent Sensor Monitoring, Anomaly Detection, and Drift Analysis**
 
----
+Sentra is a full-stack web application designed to help users monitor sensor and asset data, investigate unusual readings, and build a clearer picture of sensor reliability. It combines a browser-based dashboard with a Node.js API and a Python machine-learning service intended for anomaly detection and drift analysis.
 
-## 1. Executive Summary
+> **Project status:** The frontend is deployed on Vercel and the Node.js backend is deployed on Render. The backend has been observed starting successfully, but it may fall back to an in-memory MongoDB instance when a persistent database is unavailable. The ML service is not yet connected to the deployed backend. Authentication and end-to-end workflows should be verified before using this project with real users or data.
 
-**SENTRA** is an industrial-grade sensor intelligence and autonomous digital-twin platform developed to solve critical sensor degradation in harsh remote infrastructure. In extreme remote environments (such as Indian Antarctic Research Stations *Bharati* and *Maitri* operated by NCPOR/MoES), harsh blizzards, thermal cycling, and electrical interference cause sensor drift, transient spikes, stuck readings, and intermittent dropouts.
+## Table of contents
 
-Traditional monitoring systems rely on static threshold alerts that trigger frequent false alarms during genuine environmental events (such as sudden polar blizzards dropping temperature across an entire meteorological mast) while failing to detect gradual transducer drift or frozen stuck-at values that remain within static bounds.
+- [Overview](#overview)
+- [Goals](#goals)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Technology stack](#technology-stack)
+- [Repository structure](#repository-structure)
+- [Live demo](#live-demo)
+- [Prerequisites](#prerequisites)
+- [Run locally](#run-locally)
+- [Environment variables](#environment-variables)
+- [API and service checks](#api-and-service-checks)
+- [Deployment](#deployment)
+- [Data persistence](#data-persistence)
+- [Security notes](#security-notes)
+- [Troubleshooting](#troubleshooting)
+- [Development workflow](#development-workflow)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
 
-**SENTRA solves this by:**
-1. **Continuous Signal Verification & Anomaly Scoring:** Unsupervised isolation forest and rolling statistical moments evaluate signal jitter and temporal rate of change.
-2. **Spatial Peer Consensus & Disambiguation:** Compares candidate readings against physically correlated spatial peers. When all peers shift in physical concordance, SENTRA confirms a **Genuine Environmental Event** (0 false alarms). When only a single sensor diverges, SENTRA flags a **Hardware Sensor Fault** (Gradual Drift or Stuck-At).
-3. **Calibrated 0–100 Sensor Trust Metric:** Dynamically estimates continuous trust based on peer concordance, temporal persistence, missing-data rates, and transducer noise.
-4. **Impacted Asset Digital Twin & Cascading Risk:** Connects verified sensor health to operational assets (Generators, HVAC Air Handlers, Cooling Pumps, Battery BESS) to simulate downstream risk without propagating low-trust readings into false shutdowns.
-5. **Model Evaluation Workspace:** Backed by held-out test trajectories, reporting real confusion matrices, class-by-class metrics, and proving a **90% false-alarm reduction** versus naive threshold baselines.
+## Overview
 
----
+Sensor systems can produce noisy readings, unexpected changes, and false alarms. Sentra aims to provide a unified interface for reviewing sensor and asset information and, as the ML integration is completed, supporting anomaly detection and drift analysis.
 
-## 2. Supported Sensor Fault Scenarios
+The project is organized into three main application layers:
 
-SENTRA detects, classifies, and explains 8 canonical operating regimes:
+1. **Frontend:** A React dashboard for interacting with the application.
+2. **Backend:** An Express API for application logic, authentication, data access, and real-time communication.
+3. **Machine-learning service:** A Python/FastAPI service intended to provide model-backed analysis.
 
-| Regime Class | Description | Detection Mechanism |
+MongoDB is used as the application's data store through Mongoose. For a persistent deployment, configure a real MongoDB deployment instead of relying on an in-memory fallback.
+
+## Goals
+
+- Provide a single dashboard for sensor- and asset-related information.
+- Make it easier to identify unusual sensor behavior.
+- Support analysis of changes in sensor behavior over time.
+- Separate user-interface, API, data, and ML responsibilities.
+- Provide a deployable foundation that can be extended with additional models, data sources, and monitoring capabilities.
+
+## Features
+
+The repository contains the foundations for the following capabilities. Availability may depend on the current deployment configuration.
+
+- **Web dashboard:** React-based user interface.
+- **Backend API:** Express endpoints for application functionality.
+- **Authentication flow:** Login-related frontend and backend code; verify the deployed login behavior before relying on it.
+- **Sensor and asset data:** Mongoose models and seed scripts are present in the backend.
+- **Real-time communication:** Socket.IO is included in the backend stack.
+- **ML service foundation:** Python/FastAPI application intended for machine-learning operations.
+- **Cloud deployment:** Frontend and backend have separate deployment targets.
+
+> Do not assume every feature is production-ready just because its code exists. In particular, the deployed ML service, persistent database, and authentication behavior must be validated end to end.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    U[User / Browser] --> F[React + Vite Frontend]
+    F -->|HTTPS API requests| B[Node.js + Express Backend]
+    B --> D[(MongoDB)]
+    B -->|ML HTTP requests| M[Python + FastAPI ML Service]
+    B -.-> S[Socket.IO real-time events]
+```
+
+### Component responsibilities
+
+| Component | Responsibility | Technology |
 |---|---|---|
-| `NORMAL` | Standard operational variance within baseline bounds | Rolling mean ($\mu$) & standard deviation ($\sigma$) within nominal limits |
-| `GRADUAL_DRIFT` | Progressive thermocouple/transducer calibration divergence | Moving linear slope & spatial peer residual divergence ($> 5.0\sigma$) |
-| `SUDDEN_SPIKE` | Transient impulse electrical spike or ADC bit error | Step impulse derivative ($\Delta > 12.0$) unconfirmed by peer channels |
-| `FROZEN_STUCK` | Transducer lockup returning identical static readings | Zero dynamic variance detector ($N \ge 8$ identical consecutive cycles) |
-| `EXCESSIVE_NOISE` | High-frequency circuit noise or loose shielding jitter | Moving window standard deviation breach ($\sigma > 3.0\times$ baseline) |
-| `MISSING_DROPOUT` | Intermittent packet loss or complete telemetry dropout | Telemetry frame gap detector ($null$ / $NaN$ / packet timeout) |
-| `RATE_OF_CHANGE_ANOMALY` | Physically impossible step rate of change | First-order difference exceeding physical thermodynamics limits |
-| `GENUINE_ENVIRONMENTAL_EVENT` | True ambient weather shock (e.g. polar blizzard) | Cross-sensor spatial concordance ($\ge 60\%$) with peer residual $< 2.5\sigma$ |
+| Frontend | Dashboard, user interaction, API requests | React, Vite, Axios |
+| Backend | API routes, application logic, authentication, real-time communication | Node.js, Express, Socket.IO |
+| Data layer | Store and retrieve application data | MongoDB, Mongoose |
+| ML service | Intended model inference and sensor analysis | Python, FastAPI, scikit-learn |
+| Hosting | Build and serve the web app and API | Vercel, Render |
+| Source control | Code hosting and version history | Git, GitHub |
 
----
+## Technology stack
 
-## 3. Mathematical & ML Architecture
+### Frontend
+- React 19
+- Vite
+- JavaScript
+- Axios
 
-### A. Contextual Sensor Intelligence Ensemble
-* **Unsupervised Anomaly Detector:** `IsolationForest` (60 estimators, contamination=0.04) trained on nominal steady-state trajectories to capture multi-dimensional baseline manifolds.
-* **Supervised Fault Classifier:** Balanced `RandomForestClassifier` (70 estimators, max_depth=8) trained on multi-sensor feature matrices including:
-  * Rolling mean, rolling variance, and moving slope over a sliding window ($W=8$).
-  * Peer median, peer residual $|\text{reading} - \text{median}(\text{peers})|$, and spatial concordance ratio.
-  * Consecutive stuck-at streak counter and missing measurement rates.
+### Backend
+- Node.js
+- Express.js
+- Socket.IO
+- Mongoose
 
-### B. Calibrated Sensor Trust Formulation ($0 - 100$)
-Trust $T(t)$ is computed deterministically:
-$$T(t) = \text{clamp}\left(100 - \sum \delta_{\text{evidence}}, 0, 100\right)$$
-* For **Genuine Environmental Events**: Peer concordance guarantees sensor health is preserved:
-  $$T_{\text{genuine}} = \max\left(90.0, 100.0 - 1.5 \cdot \text{residual}_{\text{peer}}\right)$$
-* For **Hardware Faults**: Penalties are applied based on anomaly persistence, calibration divergence, and signal loss ($\delta_{\text{drift}} = -30$, $\delta_{\text{stuck}} = -45$, $\delta_{\text{dropout}} = -55$).
-* Status thresholds:
-  * $T \ge 85$: `HEALTHY`
-  * $60 \le T < 85$: `SUSPECTED_FAULT`
-  * $T < 60$: `CONFIRMED_FAULT`
-  * Data dropout: `STALE_MISSING`
+### Machine learning
+- Python
+- FastAPI
+- scikit-learn
 
----
+The exact Python packages and model capabilities depend on the files in `ml/` and its requirements file.
 
-## 4. Full-Stack System Architecture
+### Data storage
+- MongoDB
+- Mongoose ODM
+- An in-memory MongoDB fallback may be used by the backend if an external database cannot be reached. This is suitable only for temporary development/demo scenarios because its data may disappear when the process restarts.
 
-```
-[ Synthetic / Real Telemetry Generator / SCADA Gateway ]
-                         │
-                         ▼
-             [ Node.js Express Backend ] (:5001)
-     ┌───────────────────┴───────────────────┐
-     ▼                                       ▼
-[ MongoDB / In-Memory ]             [ Python ML FastAPI Service ] (:8000)
-- Station & Asset Twins             - Isolation Forest Anomaly Detector
-- Monitored Sensor Channels         - Random Forest Fault Classifier
-- Explainable Alerts & Audits       - Held-out Benchmark Evaluator
-- Evaluation Benchmark Results      - Peer Spatial Concordance Logic
-     │                                       │
-     └───────────────────┬───────────────────┘
-                         ▼
-             [ React 19 + Vite Frontend ] (:5173)
-             - Sensor Intelligence Overview Dashboard
-             - Sensor Explorer & Historical Timeseries
-             - Model Evaluation Workspace & Confusion Matrix
-             - Connected Digital Twin & Dependency Graph
-             - Explainable Decision Support & Alert Drawer
+### Deployment and tooling
+- Vercel — frontend
+- Render — backend; ML hosting can be added separately
+- Git and GitHub — version control and repository hosting
+
+## Repository structure
+
+The repository is organized approximately as follows. Check the actual directory contents if files have been renamed or moved.
+
+```text
+sentra/
+├── frontend/          # React + Vite application
+│   └── src/            # UI and API client code
+├── backend/           # Node.js + Express API
+│   ├── ...             # Routes, models, configuration, seed scripts
+│   └── package.json
+├── ml/                # Python ML / FastAPI service
+├── docker-compose.yml # Local multi-service setup, if configured
+├── render.yaml        # Render deployment configuration, if configured
+└── README.md
 ```
 
----
+## Live demo
 
-## 5. Quickstart & Local Reproduction
+- **Frontend:** https://sentra-seven-pi.vercel.app
+- **Backend:** https://sentra-4qzx.onrender.com
 
-### Prerequisites
-* **Node.js** v18+ (tested on v20 and v22)
-* **Python** 3.10+ (tested on Python 3.12 / 3.14)
-* **npm** v9+
+The backend has responded to a ping/health request during deployment checks. Render free services may take time to wake up after inactivity.
 
-### Option A: 1-Command Startup (Recommended)
+**Current deployment caveats**
+- The frontend's `VITE_API_URL` should be configured as `https://sentra-4qzx.onrender.com` in Vercel, then the frontend must be redeployed.
+- The backend has reported using an in-memory MongoDB fallback. Configure persistent MongoDB for reliable data retention.
+- The ML dependency has reported connection refused at `localhost:8000`. A separately deployed ML service and correct backend `ML_SERVICE_URL` are needed before ML-backed features can be considered live.
+- Confirm login, API requests, and the main user workflows in the deployed site before presenting them as fully operational.
+
+## Prerequisites
+
+Install the following before running Sentra locally:
+
+- Git
+- Node.js and npm (use a Node.js version compatible with the packages in the repository)
+- Python 3.10 or a version compatible with `ml/requirements.txt`
+- pip and Python virtual-environment support
+- MongoDB, or the repository's supported in-memory fallback for temporary development
+
+Optional:
+- Docker and Docker Compose, if you prefer the repository's container setup.
+
+## Run locally
+
+Run each service in its own terminal from the repository root.
+
+### 1. Clone the repository
+
 ```bash
-# Clone repository
-git clone https://github.com/Atharva7153/Polaris.git
-cd Polaris
+git clone https://github.com/shubhampawar721919-prog/sentra.git
+cd sentra
+```
 
-# Run automated setup script (installs npm dependencies and Python venv)
-chmod +x setup.sh start.sh
-./setup.sh
+### 2. Start the ML service
 
-# Start all three services concurrently (Frontend, Backend, ML)
+```bash
+cd ml
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+If the entry point or module path differs in your current checkout, inspect `ml/` and use the FastAPI app module defined by the repository. Keep the ML service running in this terminal.
+
+### 3. Start the backend
+
+Open another terminal:
+
+```bash
+cd sentra/backend
+npm install
+```
+
+Set the backend environment variables described below, then start the server:
+
+```bash
 npm run dev
 ```
 
-### Option B: Manual Service Startup
-1. **Start Python ML Service (Port 8000):**
-   ```bash
-   cd ml
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+If the project does not define a `dev` script, inspect `backend/package.json` and use the available development/start script. For a production-style local start, the repository may provide:
+
+```bash
+npm start
+```
+
+The backend must be configured to reach your MongoDB instance and ML service. When running locally, the ML service is typically available at `http://127.0.0.1:8000`.
+
+### 4. Start the frontend
+
+Open a third terminal:
+
+```bash
+cd sentra/frontend
+npm install
+```
+
+Create a local environment file named `.env.local` inside `frontend/`:
+
+```dotenv
+VITE_API_URL=http://localhost:5001
+```
+
+This value assumes the backend listens on port `5001`, which is the frontend's fallback default in the current code. If your backend uses a different port, update the value to match it.
+
+Start Vite:
+
+```bash
+npm run dev
+```
+
+Open the local URL printed by Vite in your terminal (commonly `http://localhost:5173`).
+
+### 5. Verify the services
+
+- Open the frontend and confirm it loads.
+- Check the backend's documented ping/health endpoint.
+- Inspect browser developer tools if API requests fail.
+- Verify that the backend can reach MongoDB.
+- Verify that the backend can reach the ML service if ML features are being tested.
+
+The exact API routes can be found in the backend route files. Do not assume an endpoint exists unless it is defined by the current code.
+
+## Environment variables
+
+Environment variable names are application-specific. Check the backend configuration files and `backend/.env.example` if one exists before adding variables. Never commit secrets.
+
+### Frontend (`frontend/.env.local`)
+
+| Variable | Purpose | Example |
+|---|---|---|
+| `VITE_API_URL` | Root URL for the backend API | `http://localhost:5001` locally; `https://sentra-4qzx.onrender.com` on Vercel |
+
+The frontend's API client appends `/api` when needed. Therefore, set the value to the backend root URL, not to a URL that already includes `/api`, unless the current API client code has changed.
+
+Vite embeds `VITE_` variables into client-side code. **Never store passwords, private API keys, database credentials, or other secrets in frontend variables.**
+
+### Backend
+
+Use the exact names read by the backend code. Common deployment settings for this architecture include:
+
+| Variable | Purpose | Example / guidance |
+|---|---|---|
+| `PORT` | HTTP server port | Use the hosting provider's assigned port where required |
+| `FRONTEND_URL` | Allowed frontend origin for CORS | `https://sentra-seven-pi.vercel.app` |
+| `MONGODB_URI` | Persistent MongoDB connection string | Use a private connection string from MongoDB Atlas or another MongoDB host |
+| `ML_SERVICE_URL` | Base URL of the ML service | Local: `http://127.0.0.1:8000`; production: the deployed ML service's HTTPS URL |
+
+These are configuration examples, not a guarantee that every variable is read by the current code. Check the source before setting or renaming variables. If the code expects a different MongoDB variable name, use the name it actually reads.
+
+### ML service
+
+Check `ml/` for any required settings. If the service uses a port variable, configure it according to its entry point and hosting provider. Ensure the backend's `ML_SERVICE_URL` points to the ML service's **public service URL** in production, not `localhost` or `127.0.0.1`.
+
+## API and service checks
+
+The backend exposes ping/health functionality in the current deployment. Use the endpoint paths defined by the backend source; a typical deployment may expose:
+
+```text
+https://sentra-4qzx.onrender.com/api/ping
+```
+
+If this route exists in your deployed version, a successful response indicates the backend can respond to the request. It does not, by itself, prove that authentication, persistent storage, or ML inference is working.
+
+For troubleshooting, check:
+1. Browser DevTools → **Network** for the failing request and HTTP status.
+2. Vercel deployment logs for frontend build errors.
+3. Render backend logs for API, CORS, database, and ML connection errors.
+4. ML service logs for startup or inference failures.
+
+## Deployment
+
+### Frontend on Vercel
+
+1. Import the GitHub repository into Vercel.
+2. Set the project root directory to `frontend/`.
+3. Use the frontend's normal install/build commands. The standard Vite build command is `npm run build`.
+4. Add the production environment variable:
+
+   ```dotenv
+   VITE_API_URL=https://sentra-4qzx.onrender.com
    ```
 
-2. **Start Backend API & Database (Port 5001):**
-   ```bash
-   cd backend
-   npm install
-   # Automatic in-memory MongoDB fallback activates if local mongod is not present!
-   npm run dev
-   ```
+5. Redeploy after changing environment variables.
+6. Open the deployed website and verify the login flow and API calls.
 
-3. **Start Frontend Console (Port 5173):**
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-   Open `http://localhost:5173` in your browser.
+If Vercel is configured to build from the repository root instead of `frontend/`, update the root directory or configure the build and output settings to match the repository.
 
----
+### Backend on Render
 
-## 6. Judge & Demo Credentials
+1. Create a Web Service connected to the GitHub repository.
+2. Set the root directory to `backend/`.
+3. Configure the build command using the project's package scripts/dependencies (commonly `npm install`).
+4. Configure the start command according to `backend/package.json` (commonly `npm start`).
+5. Set the environment variables the backend actually uses, including the frontend origin and persistent database URI.
+6. Deploy and inspect the logs until the server reports it is listening and its database connection is healthy.
 
-Click the **"1-Click Judge Login"** button on the login screen, or authenticate using:
+### ML service hosting
 
-| Field | Value |
-|---|---|
-| **Demo Email** | `admin@sentra.ai` *(or `admin@polaris.gov`)* |
-| **Password** | `password123` |
-| **Role** | System Administrator / Mission Operations Specialist |
+Deploy the Python service as a separate web service or use a container setup that runs it. Then:
 
----
+1. Confirm the service starts and its health endpoint works.
+2. Set the backend's `ML_SERVICE_URL` to the deployed ML service's reachable HTTPS base URL.
+3. Redeploy/restart the backend.
+4. Confirm the backend no longer reports connection refused to `localhost:8000`.
+5. Test a real ML request and inspect both services' logs.
 
-## 7. Interactive Judge Demonstration Guide
+Do not use `http://127.0.0.1:8000` as the production ML URL when the ML service runs in a separate Render service: localhost refers to the backend's own container.
 
-Follow this 5-step walkthrough to verify all Track 4 requirements:
+## Data persistence
 
-1. **Sensor Intelligence Overview (`/dashboard`):**
-   * Inspect the live fleet metrics: Monitored Sensors (24+ channels), Healthy Channels, Suspected Faults, Fleet Trust Score ($96/100$), and False-Alarm Reduction ($-90\%$).
-   * Use the **Live Demo Scenario Injector** strip at the top to inject scenarios with 1 click.
+An in-memory MongoDB fallback is **not persistent storage**. Data written to it can disappear when the backend process restarts or the hosting platform replaces the instance.
 
-2. **Demonstrate Sensor Fault vs. Genuine Event Disambiguation:**
-   * Click **"Simulate Sensor Drift (Fault)"**: Injects $+8.5^\circ\text{C}$ drift into `SEN-TEMP-ENV-01` while peer sensors stay nominal. Notice `SEN-TEMP-ENV-01` is flagged as `SUSPECTED_FAULT` (Trust drops to $65\%$) with explainable evidence attributing the divergence to a single transducer failure. Downstream HVAC systems are **protected** from false alarms.
-   * Click **"Trigger Cold Front (Genuine Event)"**: Simulates a sudden $-14^\circ\text{C}$ polar blizzard dropping all 3 weather mast sensors simultaneously in consensus. Notice the system identifies `GENUINE_ENVIRONMENTAL_EVENT`, maintaining $95\%+$ sensor trust and producing **ZERO false hardware alarms**.
-   * Click **"Reset Nominal"** to restore nominal baseline.
+For a reliable deployment:
 
-3. **Inspect Timeseries in Sensor Explorer (`/telemetry`):**
-   * Select `SEN-TEMP-ENV-01`.
-   * View the real-time Recharts timeseries chart displaying raw readings, detected anomalies, peer consensus bands, and historical trust trajectories.
-   * Review the explainable evidence factors, nominal operating envelopes, and downstream asset dependencies.
+1. Provision MongoDB Atlas or another persistent MongoDB host.
+2. Create a database user with only the permissions required by the application.
+3. Configure network access securely for the deployment environment.
+4. Set the database URI using the exact environment variable expected by the backend code.
+5. Restart/redeploy the backend and confirm logs show a connection to the intended persistent database.
+6. Test that data remains after a backend restart.
 
-4. **Model Evaluation Workspace (`/analytics`):**
-   * Inspect the real benchmark metrics computed on held-out test trajectories (Macro F1: $58\%$, Genuine Event Recall: $95\%$, False Alarm Rate: $0.0\%$, Detection Delay: $1.2$ cycles, Inference Latency: $8.7\text{ ms}$).
-   * Review the **Head-to-Head Comparison Table** proving $-90\%$ false alarms compared to static thresholds.
-   * Explore the interactive **8x8 Confusion Matrix Heatmap** (hover over any cell to see ground truth vs predicted distributions).
-   * Click **"Run Live Benchmark Test"** to trigger a live evaluation run across 1,200 synthetic held-out samples.
+Never commit a database connection string to GitHub.
 
-5. **Operational Digital Twin & Explainable Alerts (`/digital-twin` & `/alerts`):**
-   * In Digital Twin, observe the **SENSOR TRUST** metric badge alongside station resilience and energy margins.
-   * In Alerts, click any active alert to open the **Explainable Decision Support Drawer** showing root-cause diagnosis, cross-referenced peer sensors, cascade consequences, and recommended operator maintenance actions.
+## Security notes
 
----
+Before using Sentra with real users or production data:
 
-## 8. Technology Stack Summary
+- Verify that login is enforced on protected pages and API routes.
+- Do not treat hiding a login screen in the frontend as access control; enforce authorization on the backend.
+- Remove or disable demo-login shortcuts before production if they are not intended.
+- Use secure password hashing and proper session/token validation, as supported by the codebase.
+- Restrict CORS to trusted origins rather than allowing every origin by default.
+- Store secrets only in hosting-provider environment variables or a secret manager.
+- Use HTTPS for deployed services.
+- Validate request input and apply appropriate authorization checks to sensitive operations.
+- Add rate limiting and safe error handling to public authentication endpoints.
+- Avoid storing sensitive tokens in browser storage unless the security trade-offs are understood.
+- Review dependency audit reports and update vulnerable packages carefully.
+- Use persistent database storage and backups for important data.
 
-* **Frontend:** React 19, Vite 8, Tailwind CSS, Recharts 3, Framer Motion, Lucide Icons, Socket.IO Client.
-* **Backend:** Node.js, Express, Socket.IO, Mongoose, In-Memory MongoDB Server (zero setup friction), Axios.
-* **Machine Learning:** Python 3.12+, FastAPI, Scikit-Learn (Isolation Forest & Random Forest), XGBoost, Pandas, NumPy, Joblib.
+This README is not a security certification. Review the current implementation before production use.
 
----
+## Troubleshooting
 
-*SENTRA · Trust the Signal. Detect the Fault. · Developed for Code Apex — Track 4: Technology for Social Cause.*
+### The frontend loads, but API requests fail
+
+- Confirm `VITE_API_URL` is set in Vercel to `https://sentra-4qzx.onrender.com`.
+- Redeploy the frontend after changing the variable.
+- Open browser DevTools → Network and inspect the failing URL and status.
+- Check the Render service logs and CORS configuration.
+
+### Login is skipped or the dashboard opens unexpectedly
+
+- Test in a private/incognito browser window.
+- Clear site data for the deployed frontend and try again.
+- Review frontend authentication state, route guards, demo-login shortcuts, and session restoration.
+- Verify protected backend endpoints require valid authentication; do not rely on frontend routing alone.
+
+### Login fails
+
+- Inspect the login request in DevTools → Network.
+- `401` commonly indicates invalid credentials or rejected authentication.
+- `404` can indicate an incorrect API route.
+- `500` indicates a server-side failure; inspect Render logs.
+- A browser CORS error suggests the backend's allowed origin does not match the frontend origin.
+- Confirm the expected user exists in the database that the deployed backend is actually using.
+
+### Data disappears after redeployment or restart
+
+The backend may be using its in-memory MongoDB fallback. Configure a persistent MongoDB instance and verify that the backend connects to it.
+
+### ML status is offline or connection is refused
+
+- Ensure the ML service is running.
+- Locally, check that the app is listening on the expected port.
+- In production, set `ML_SERVICE_URL` to the separate ML service's reachable URL.
+- Restart/redeploy the backend and check its logs.
+- Test the ML service directly before debugging the backend integration.
+
+### Render service takes a long time to respond
+
+A free service may need to wake from inactivity. Wait for the service to start, then retry. Check Render logs if it remains unavailable.
+
+## Development workflow
+
+1. Create a feature branch.
+2. Make a focused change in the relevant service.
+3. Install dependencies and run that service locally.
+4. Test the affected UI/API/ML flow.
+5. Review environment variables and ensure secrets are not staged.
+6. Commit and push your branch.
+7. Validate the deployed build and review service logs.
+
+Example:
+
+```bash
+git checkout -b feature/your-change
+git status
+git add .
+git commit -m "Describe your change"
+git push -u origin feature/your-change
+```
+
+Review `git status` before committing and do not commit `.env` files containing secrets.
+
+## Roadmap
+
+Potential next steps for making the deployment more complete:
+
+- [ ] Verify login and protected-route behavior end to end.
+- [ ] Configure persistent MongoDB and test data retention.
+- [ ] Deploy the ML service and connect it through `ML_SERVICE_URL`.
+- [ ] Test anomaly detection and drift-analysis flows with representative data.
+- [ ] Add automated frontend/backend tests.
+- [ ] Add consistent health checks and structured logging.
+- [ ] Document confirmed API routes and request/response examples.
+- [ ] Add monitoring, backups, and production security hardening.
+
+## Contributing
+
+Contributions and suggestions are welcome. For larger changes, open an issue first to discuss the approach. Keep pull requests focused, include relevant test steps, and document any new environment variables.
+
+## License
+
+No license is specified here. Add a `LICENSE` file and update this section before inviting reuse or redistribution. Without an explicit license, users generally do not receive permission to reuse, modify, or redistribute the project beyond rights granted by applicable law.
